@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF Text Replacer</title>
+<style>
+  :root {
+    --navy: #1E2761; --deep: #141B49; --ice: #CADCFC; --amber: #F0A93B;
+    --ink: #222840; --slate: #5C6B8C; --card: #F5F7FC; --line: #E1E6F2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", Calibri, Arial, sans-serif;
+    background: linear-gradient(160deg, var(--navy) 0%, var(--deep) 100%);
+    color: var(--ink); min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 40px 18px 28px;
+  }
+  header { text-align: center; color: #fff; max-width: 680px; margin-bottom: 28px; }
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 2px;
+    color: var(--amber); margin-bottom: 14px;
+  }
+  h1 { font-family: Georgia, Cambria, serif; font-size: clamp(28px, 5vw, 40px); line-height: 1.15; }
+  header p { color: var(--ice); margin-top: 12px; font-size: 16px; line-height: 1.5; }
+
+  .card {
+    background: #fff; width: 100%; max-width: 640px; border-radius: 16px;
+    padding: 28px; box-shadow: 0 18px 50px rgba(0,0,0,.35);
+  }
+  .step { display: flex; align-items: center; gap: 10px; font-weight: 700; margin-bottom: 10px; }
+  .step span {
+    width: 26px; height: 26px; border-radius: 50%; background: var(--amber); color: var(--deep);
+    display: grid; place-items: center; font-size: 13px;
+  }
+
+  .drop {
+    border: 2px dashed #b9c4e0; background: var(--card); border-radius: 12px;
+    padding: 28px 16px; text-align: center; cursor: pointer; transition: .2s;
+    margin-bottom: 22px;
+  }
+  .drop:hover, .drop.over { border-color: var(--navy); background: #eaeffb; }
+  .drop svg { width: 38px; height: 38px; stroke: var(--navy); margin-bottom: 8px; }
+  .drop strong { display: block; color: var(--ink); }
+  .drop small { color: var(--slate); }
+  .drop.has-file { border-style: solid; border-color: var(--amber); background: #fff8ea; }
+  input[type=file] { display: none; }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+  @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--slate); margin-bottom: 6px; }
+  input[type=text] {
+    width: 100%; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 10px;
+    font-size: 15px; color: var(--ink); background: var(--card); outline: none; transition: .15s;
+  }
+  input[type=text]:focus { border-color: var(--navy); background: #fff; }
+
+  button.go {
+    width: 100%; padding: 14px; border: 0; border-radius: 10px; cursor: pointer;
+    background: var(--navy); color: #fff; font-size: 16px; font-weight: 700; transition: .2s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  button.go:hover:not(:disabled) { background: var(--deep); transform: translateY(-1px); }
+  button.go:disabled { opacity: .6; cursor: not-allowed; }
+  .spin {
+    width: 18px; height: 18px; border: 3px solid rgba(255,255,255,.35); border-top-color: #fff;
+    border-radius: 50%; animation: s .8s linear infinite; display: none;
+  }
+  .busy .spin { display: block; }
+  @keyframes s { to { transform: rotate(360deg); } }
+
+  .msg { margin-top: 18px; padding: 14px 16px; border-radius: 10px; font-size: 14px; display: none; line-height: 1.5; }
+  .msg.err { display: block; background: #fdeeee; color: #8a1f1f; border: 1px solid #f3c6c6; }
+  .msg.ok { display: block; background: #eef8f0; color: #1d5e2c; border: 1px solid #c4e5cc; }
+  .msg a {
+    display: inline-block; margin-top: 10px; margin-right: 8px; padding: 9px 16px; border-radius: 8px;
+    background: var(--amber); color: var(--deep); font-weight: 700; text-decoration: none;
+  }
+  .msg a.alt { background: #fff; border: 1.5px solid var(--navy); color: var(--navy); }
+
+  .tips { margin-top: 22px; font-size: 12.5px; color: var(--slate); line-height: 1.6; }
+  footer { margin-top: 26px; color: var(--ice); font-size: 13px; text-align: center; opacity: .85; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="badge">AJP MINI PROJECT &middot; TEAM 5</div>
+    <h1>Enterprise PDF Workflow &amp; Text-Replacement Engine</h1>
+    <p>Upload a PDF, tell us which text to change, and download the corrected file in seconds.</p>
+  </header>
+
+  <main class="card">
+    <form id="form">
+      <div class="step"><span>1</span> Choose your PDF</div>
+      <div class="drop" id="drop">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 17v-5"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5"/>
+        </svg>
+        <strong id="dropTitle">Drag &amp; drop a PDF here, or click to browse</strong>
+        <small id="dropSub">PDF files with selectable text work best</small>
+        <input type="file" id="file" accept="application/pdf,.pdf">
+      </div>
+
+      <div class="step"><span>2</span> What should change?</div>
+      <div class="row">
+        <div><label for="find">Find this text</label><input type="text" id="find" placeholder="e.g. Mango" autocomplete="off"></div>
+        <div><label for="replace">Replace with</label><input type="text" id="replace" placeholder="e.g. Orange" autocomplete="off"></div>
+      </div>
+
+      <button class="go" id="btn" type="submit"><span class="spin"></span><span id="btnText">Replace &amp; Download</span></button>
+      <div class="msg" id="msg"></div>
+    </form>
+
+    <p class="tips">
+      <strong>Tips:</strong> matching is case-sensitive ("Mango" &ne; "mango"), and the word should appear as normal text on one line. Scanned or image-only PDFs have no text to match.
+    </p>
+  </main>
+
+  <footer>Built with Java &middot; Spring Boot &middot; Apache PDFBox</footer>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const drop = $('drop'), fileInput = $('file'), msg = $('msg'), btn = $('btn');
+  let chosen = null;
+
+  function setFile(f) {
+    if (!f) return;
+    if (!/\.pdf$/i.test(f.name) && f.type !== 'application/pdf') { show('err', 'Please choose a PDF file.'); return; }
+    chosen = f;
+    drop.classList.add('has-file');
+    $('dropTitle').textContent = f.name;
+    $('dropSub').textContent = (f.size / 1024).toFixed(0) + ' KB \u00b7 click to change';
+    msg.className = 'msg';
+  }
+  function show(type, html) { msg.className = 'msg ' + type; msg.innerHTML = html; }
+
+  drop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => setFile(e.target.files[0]));
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => setFile(e.dataTransfer.files[0]));
+
+  $('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const find = $('find').value, replace = $('replace').value;
+    if (!chosen) return show('err', 'Please choose a PDF first.');
+    if (!find) return show('err', 'Please enter the text you want to find.');
+
+    const data = new FormData();
+    data.append('file', chosen);
+    data.append('find', find);
+    data.append('replace', replace);
+
+    btn.disabled = true; btn.classList.add('busy'); $('btnText').textContent = 'Processing\u2026';
+    msg.className = 'msg';
+    try {
+      const res = await fetch('/api/pdf/replace', { method: 'POST', body: data });
+      if (!res.ok) throw new Error(res.status === 413
+        ? 'That file is too large.'
+        : 'The server could not process this file. Make sure it is a valid PDF.');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const name = 'replaced_' + chosen.name;
+      show('ok', '<strong>Done!</strong> Your corrected PDF is ready. If nothing changed, check the capitalization of the text you searched for.<br>' +
+        '<a href="' + url + '" download="' + name.replace(/"/g, '') + '">Download PDF</a>' +
+        '<a class="alt" href="' + url + '" target="_blank" rel="noopener">Preview</a>');
+    } catch (err) {
+      show('err', err.message || 'Something went wrong. Please try again.');
+    } finally {
+      btn.disabled = false; btn.classList.remove('busy'); $('btnText').textContent = 'Replace & Download';
+    }
+  });
+</script>
+</body>
+</html>
